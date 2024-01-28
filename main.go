@@ -43,6 +43,10 @@ func main() {
 	re := regexp.MustCompile(pattern)
 	printCurrentDirFiles(re)
 
+	if len(gFileDisplayNames) == 0 {
+		fmt.Println("Search result is empty.")
+		return
+	}
 	// 定位到文件列表的第一行
 	clearPreviousNthLines(len(gFileDisplayNames))
 	gSelectedIndex = 0
