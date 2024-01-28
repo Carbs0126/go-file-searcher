@@ -5,6 +5,7 @@ import (
 	"github.com/eiannone/keyboard"
 	"os/exec"
 	"path/filepath"
+	"unicode/utf8"
 
 	//"golang.org/x/term"
 
@@ -86,6 +87,7 @@ func main() {
 			fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
 			fmt.Print("\r")
 		} else if key == keyboard.KeyEsc {
+			clearNextNthLine(len(gFileDisplayNames) - gSelectedIndex)
 			break
 		} else if key == keyboard.KeyEnter {
 			ret := selectCurrentFile()
@@ -146,19 +148,23 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 
 func printWithRegAndMatchedFileName(reg *regexp.Regexp, fileName string, prefix string) {
 	if reg == nil {
-		str := prefix + "    " + fileName
+		str := prefix + "    " + getDisplayFileName(fileName)
 		gFileDisplayNames = append(gFileDisplayNames, str)
 		gFileRealNames = append(gFileRealNames, fileName)
 		fmt.Println(str)
 	} else {
 		match := reg.MatchString(fileName)
 		if match {
-			str := prefix + "    " + fileName
+			str := prefix + "    " + getDisplayFileName(fileName)
 			gFileDisplayNames = append(gFileDisplayNames, str)
 			gFileRealNames = append(gFileRealNames, fileName)
 			fmt.Println(str)
 		}
 	}
+}
+
+func getDisplayFileName(fileName string) string {
+	return truncateString(fileName, 76)
 }
 
 func addStringIntoAString(originalStr string, insertedIndex int, insertedString string) string {
@@ -188,4 +194,37 @@ func selectCurrentFile() int {
 		return 2
 	}
 	return 0
+}
+
+func truncateString(input string, maxLength int) string {
+
+	if len(input) <= maxLength {
+		return input
+	}
+	// 中间四个....
+	halfMaxLength := maxLength/2 - 2
+
+	runeSlice := []rune(input)
+	leftRuneByteLength := 0
+	rightRuneByteLength := 0
+	var leftRuneSlice []rune
+	var rightRuneSlice []rune
+	for i, r := range runeSlice {
+		byteLength := utf8.RuneLen(r)
+		leftRuneByteLength = leftRuneByteLength + byteLength
+		if leftRuneByteLength >= halfMaxLength {
+			leftRuneSlice = runeSlice[0:i]
+			break
+		}
+	}
+	for i := len(runeSlice) - 1; i >= 0; i-- {
+		r := runeSlice[i]
+		byteLength := utf8.RuneLen(r)
+		rightRuneByteLength = rightRuneByteLength + byteLength
+		if rightRuneByteLength >= halfMaxLength {
+			rightRuneSlice = runeSlice[i+1:]
+			break
+		}
+	}
+	return string(leftRuneSlice) + "...." + string(rightRuneSlice)
 }
