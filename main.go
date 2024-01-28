@@ -91,7 +91,6 @@ func main() {
 			ret := selectCurrentFile()
 			if ret == 0 {
 				clearNextNthLine(len(gFileDisplayNames) - gSelectedIndex)
-				//clearNextLine()
 				break
 			}
 		}
