@@ -99,18 +99,11 @@ func truncateString(input string, maxLength int) string {
 	return string(leftRuneSlice) + "...." + string(rightRuneSlice)
 }
 
-//func getCursorLine() (string, error) {
-//	cmd := exec.Command("tput", "cup")
-//	output, err := cmd.CombinedOutput()
-//	if err != nil {
-//		return "", err
-//	}
-//	fmt.Println("--->" + string(output) + "<---")
-//	// 解析命令输出，获取行号
-//	values := strings.Fields(string(output))
-//	if len(values) != 2 {
-//		return "", fmt.Errorf("unexpected output format")
-//	}
-//
-//	return values[0], nil
-//}
+func ceil(numerator int, denominator int) int {
+	result := numerator / denominator
+	remainder := numerator % denominator
+	if remainder > 0 {
+		result++
+	}
+	return result
+}

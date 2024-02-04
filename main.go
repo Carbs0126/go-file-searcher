@@ -10,31 +10,38 @@ import (
 	"strings"
 )
 
-var gFileDisplayNamesGroup = make([][]string, 0, 16)
-var gSelectedGroup = 0
-
+var gFileDisplayNamesGroup = make([][]string, 0, 2)
+var gSelectedGroupIndex = 0
 var gFileDisplayNames = make([]string, 0, 16)
 var gFileRealNames = make([]string, 0, 16)
-var gSelectedIndex = 0
+var gSelectedLineIndex = 0
 var gTerminalColumnNumber = 0
 var gTerminalRowNumber = 0
-var gSwitchScreenLine = 0
+
+// 一屏幕多少行显示文件
+var gSwitchScreenLines = 0
+
+// 所有屏幕最高的高度
+var gMaxLineLength = 0
 
 func main() {
 	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
 	args := os.Args[1:]
 	argsLength := len(args)
 	if argsLength == 0 {
+		gSwitchScreenLines = gTerminalRowNumber - 2
 		printCurrentDirFiles(nil)
-	} else if args[0] == "-help" && argsLength == 1 {
+	} else if (args[0] == "-help" || args[0] == "-h") && argsLength == 1 {
 		printInstructions()
 		return
 	} else {
 		var wordSB strings.Builder
 		var firstKeywordIndex = 0
-		if args[0] == "-help" {
+		gSwitchScreenLines = gTerminalRowNumber - 2
+		if args[0] == "-help" || args[0] == "-h" {
 			printInstructions()
 			firstKeywordIndex = 1
+			gSwitchScreenLines = gTerminalRowNumber - 2 - len(gInstructions)
 		}
 		for i := firstKeywordIndex; i < argsLength; i++ {
 			wordSB.WriteString(args[i])
@@ -44,14 +51,11 @@ func main() {
 		printCurrentDirFiles(re)
 	}
 	if len(gFileDisplayNames) == 0 {
-		fmt.Println("Search result is empty.")
+		fmt.Println("Search results are Empty.")
 		return
 	}
-	// 定位到文件列表的第一行，如果终端的输出文字大于一屏幕，则光标只能定位到屏幕边缘，不能向上滚屏
-	clearPreviousNthLines(len(gFileDisplayNames))
-	gSelectedIndex = 0
-	fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
-	fmt.Print("\r")
+	clearPreviousNthLines(getSelectedGroupDisplayFileNamesLength())
+	printCurrentLineWithSelectedDisplayName()
 
 	err := keyboard.Open()
 	if err != nil {
@@ -68,39 +72,126 @@ func main() {
 		}
 
 		if key == keyboard.KeyArrowUp {
-			if gSelectedIndex <= 0 {
+			if gSelectedLineIndex <= 0 {
 				continue
 			}
 			clearCurrentLine()
-			fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
-			gSelectedIndex = gSelectedIndex - 1
-			if gSelectedIndex < len(gFileDisplayNames) {
+			printCurrentLineWithUnselectedDisplayName()
+			gSelectedLineIndex = gSelectedLineIndex - 1
+			if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength() {
 				clearPreviousNthLines(1)
-				fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
-				fmt.Print("\r")
+				printCurrentLineWithSelectedDisplayName()
 			}
 		} else if key == keyboard.KeyArrowDown {
-			if gSelectedIndex >= len(gFileDisplayNames)-1 {
+			if gSelectedLineIndex >= getSelectedGroupDisplayFileNamesLength()-1 {
 				continue
 			}
 			clearCurrentLine()
-			fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
-			gSelectedIndex = gSelectedIndex + 1
+			printCurrentLineWithUnselectedDisplayName()
+			gSelectedLineIndex = gSelectedLineIndex + 1
 			clearNextLine()
 			fmt.Print("\r")
-			fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
-			fmt.Print("\r")
+			printCurrentLineWithSelectedDisplayName()
+		} else if key == keyboard.KeyArrowRight {
+			// 切屏
+			if gSelectedGroupIndex >= getGroupLength()-1 {
+				continue
+			}
+			gSelectedGroupIndex = gSelectedGroupIndex + 1
+			if gSelectedLineIndex >= getSelectedGroupDisplayFileNamesLength() {
+				deltaUp := gSelectedLineIndex - getSelectedGroupDisplayFileNamesLength() + 1
+				gSelectedLineIndex = getSelectedGroupDisplayFileNamesLength() - 1
+				// 然后定位光标
+				moveCursorToPreviousNthLines(deltaUp)
+			}
+			// 先记一下刚才的selectedLineIndex，清屏后再回到这个位置
+			selectedLineIndex := gSelectedLineIndex
+
+			moveCursorToPreviousNthLines(selectedLineIndex)
+
+			for i := 0; i < gMaxLineLength; i++ {
+				clearCurrentLine()
+				fmt.Print("\r")
+				if i < gMaxLineLength-1 {
+					moveCursorToNextNthLines(1)
+				}
+			}
+			moveCursorToPreviousNthLines(gMaxLineLength - 1)
+			for i := 0; i < getSelectedGroupDisplayFileNamesLength(); i++ {
+				clearCurrentLine()
+				gSelectedLineIndex = i
+				printCurrentLineWithUnselectedDisplayName()
+				fmt.Print("\r")
+				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
+					moveCursorToNextNthLines(1)
+				}
+			}
+
+			moveCursorToPreviousNthLines(gSelectedLineIndex - selectedLineIndex)
+			gSelectedLineIndex = selectedLineIndex
+			clearCurrentLine()
+			printCurrentLineWithSelectedDisplayName()
+		} else if key == keyboard.KeyArrowLeft {
+			// 切屏
+			if gSelectedGroupIndex <= 0 {
+				continue
+			}
+			gSelectedGroupIndex = gSelectedGroupIndex - 1
+			// 先记一下刚才的selectedLineIndex，清屏后再回到这个位置
+			selectedLineIndex := gSelectedLineIndex
+
+			moveCursorToPreviousNthLines(selectedLineIndex)
+
+			for i := 0; i < gMaxLineLength; i++ {
+				clearCurrentLine()
+				fmt.Print("\r")
+				if i < gMaxLineLength-1 {
+					moveCursorToNextNthLines(1)
+				}
+			}
+			moveCursorToPreviousNthLines(gMaxLineLength - 1)
+			for i := 0; i < getSelectedGroupDisplayFileNamesLength(); i++ {
+				clearCurrentLine()
+				gSelectedLineIndex = i
+				printCurrentLineWithUnselectedDisplayName()
+				fmt.Print("\r")
+				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
+					moveCursorToNextNthLines(1)
+				}
+			}
+
+			moveCursorToPreviousNthLines(gSelectedLineIndex - selectedLineIndex)
+			gSelectedLineIndex = selectedLineIndex
+			clearCurrentLine()
+			printCurrentLineWithSelectedDisplayName()
 		} else if key == keyboard.KeyEsc {
-			clearNextNthLine(len(gFileDisplayNames) - gSelectedIndex)
+			clearCurrentLine()
+			printCurrentLineWithUnselectedDisplayName()
+			fmt.Print("\r")
+			clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
 			break
 		} else if key == keyboard.KeyEnter {
 			ret := selectCurrentFile()
 			if ret == 0 {
-				clearNextNthLine(len(gFileDisplayNames) - gSelectedIndex)
+				clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
 				break
 			}
 		}
 	}
+}
+
+func moveCursorToPreviousNthLines(nth int) {
+	if nth > 0 {
+		fmt.Print("\033[")
+		fmt.Print(nth)
+		fmt.Print("F")
+	}
+}
+
+func moveCursorToNextNthLines(nth int) {
+	fmt.Print("\033[") // ANSI escape code to move the cursor down one line
+	fmt.Print(nth)
+	fmt.Print("B")
 }
 
 func clearPreviousNthLines(nth int) {
@@ -127,6 +218,15 @@ func clearNextNthLine(nth int) {
 	fmt.Print("\033[2K") // ANSI escape code to clear the line
 }
 
+func printCurrentLineWithUnselectedDisplayName() {
+	fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, gSelectedGroupIndex, gSelectedLineIndex))
+}
+
+func printCurrentLineWithSelectedDisplayName() {
+	fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedGroupIndex, gSelectedLineIndex))
+	fmt.Print("\r")
+}
+
 func printCurrentDirFiles(reg *regexp.Regexp) {
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -143,26 +243,77 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 	for _, file := range files {
 		fileName := file.Name()
 		if !file.IsDir() {
-			printWithRegAndMatchedFileName(reg, fileName, "[F]")
+			prepareMatchedFileName(reg, fileName, "[F]")
 		} else {
-			printWithRegAndMatchedFileName(reg, fileName, "[D]")
+			prepareMatchedFileName(reg, fileName, "[D]")
 		}
+	}
+	prepareMatchedFileNameGroup()
+	displayCurrentFileNamesForFirstTime()
+}
+
+func displayCurrentFileNamesForFirstTime() {
+	// 获取一屏幕
+	gSelectedGroupIndex = 0
+	gSelectedLineIndex = 0
+	currentScreenFileNames := getSelectedGroupDisplayFileNames()
+	for _, value := range currentScreenFileNames {
+		fmt.Println(value)
 	}
 }
 
-func printWithRegAndMatchedFileName(reg *regexp.Regexp, fileName string, prefix string) {
+func getSelectedGroupDisplayFileNamesLength() int {
+	if len(gFileDisplayNamesGroup) == 0 {
+		return 0
+	}
+	return len(gFileDisplayNamesGroup[gSelectedGroupIndex])
+}
+
+func getGroupLength() int {
+	return len(gFileDisplayNamesGroup)
+}
+
+func getSelectedGroupDisplayFileNames() []string {
+	if len(gFileDisplayNamesGroup) == 0 {
+		return nil
+	}
+	return gFileDisplayNamesGroup[gSelectedGroupIndex]
+}
+
+func prepareMatchedFileNameGroup() {
+	groupLength := ceil(len(gFileDisplayNames), gSwitchScreenLines)
+	for i := 0; i < groupLength; i++ {
+		oneScreenContent := make([]string, 0, gSwitchScreenLines)
+		for j := 0; j < gSwitchScreenLines; j++ {
+			indexOfFileName := i*gSwitchScreenLines + j
+			if indexOfFileName < len(gFileDisplayNames) {
+				oneScreenContent = append(oneScreenContent, gFileDisplayNames[indexOfFileName])
+			} else {
+				break
+			}
+		}
+		gFileDisplayNamesGroup = append(gFileDisplayNamesGroup, oneScreenContent)
+	}
+	if groupLength == 0 {
+		gMaxLineLength = 0
+	} else if groupLength == 1 {
+		gMaxLineLength = len(gFileDisplayNames)
+	} else {
+		gMaxLineLength = gSwitchScreenLines
+	}
+}
+
+func prepareMatchedFileName(reg *regexp.Regexp, fileName string, prefix string) {
 	if reg == nil {
 		str := prefix + "    " + getDisplayFileName(fileName)
 		gFileDisplayNames = append(gFileDisplayNames, str)
 		gFileRealNames = append(gFileRealNames, fileName)
-		fmt.Println(str)
 	} else {
 		match := reg.MatchString(fileName)
 		if match {
 			str := prefix + "    " + getDisplayFileName(fileName)
 			gFileDisplayNames = append(gFileDisplayNames, str)
 			gFileRealNames = append(gFileRealNames, fileName)
-			fmt.Println(str)
 		}
 	}
 }
@@ -175,11 +326,11 @@ func addStringIntoAString(originalStr string, insertedIndex int, insertedString 
 	return originalStr[0:insertedIndex] + insertedString + originalStr[insertedIndex+1:]
 }
 
-func getSelectedFileNameByIndex(arr []string, selectedIndex int) string {
-	return addStringIntoAString(arr[selectedIndex], 4, ">")
+func getSelectedFileNameByIndex(arr []string, selectedGroupIndex int, selectedLineIndex int) string {
+	return addStringIntoAString(arr[selectedGroupIndex*gSwitchScreenLines+selectedLineIndex], 4, ">")
 }
-func getUnselectedFileNameByIndex(arr []string, selectedIndex int) string {
-	return arr[selectedIndex]
+func getUnselectedFileNameByIndex(arr []string, selectedGroupIndex int, selectedLineIndex int) string {
+	return arr[selectedGroupIndex*gSwitchScreenLines+selectedLineIndex]
 }
 
 func selectCurrentFile() int {
@@ -189,7 +340,7 @@ func selectCurrentFile() int {
 		return 1
 	}
 
-	cmd := exec.Command("open", filepath.Join(currentDir, gFileRealNames[gSelectedIndex]))
+	cmd := exec.Command("open", filepath.Join(currentDir, gFileRealNames[gSelectedGroupIndex*gSwitchScreenLines+gSelectedLineIndex]))
 
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
