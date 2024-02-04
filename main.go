@@ -5,8 +5,6 @@ import (
 	"github.com/eiannone/keyboard"
 	"os/exec"
 	"path/filepath"
-	"unicode/utf8"
-
 	//"golang.org/x/term"
 
 	//"golang.org/x/term"
@@ -18,6 +16,8 @@ import (
 var gFileDisplayNames = make([]string, 0, 16)
 var gFileRealNames = make([]string, 0, 16)
 var gSelectedIndex = 0
+var gTerminalColumnNumber = 0
+var gTerminalRowNumber = 0
 
 func main() {
 	args := os.Args[1:]
@@ -26,28 +26,22 @@ func main() {
 		printCurrentDirFiles(nil)
 		return
 	}
-
-	fmt.Println("|---------------- Instructions ----------------|")
-	fmt.Println("| 1. Press ESC to quit.                        |")
-	fmt.Println("| 2. Press ↑ or ↓ to select a file.            |")
-	fmt.Println("| 3. Press Enter to open the selected file.    |")
-	fmt.Println("|----------------------------------------------|")
-
+	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
+	printInstructions()
 	var wordSB strings.Builder
 	for i := 0; i < argsLength; i++ {
 		wordSB.WriteString(args[i])
 	}
 
-	// 创建正则表达式对象
 	pattern := wordSB.String()
-	re := regexp.MustCompile(pattern)
+	re := regexp.MustCompile("(?i)" + pattern)
 	printCurrentDirFiles(re)
 
 	if len(gFileDisplayNames) == 0 {
 		fmt.Println("Search result is empty.")
 		return
 	}
-	// 定位到文件列表的第一行
+	// 定位到文件列表的第一行，如果终端的输出文字大于一屏幕，则光标只能定位到屏幕边缘，不能向上滚屏
 	clearPreviousNthLines(len(gFileDisplayNames))
 	gSelectedIndex = 0
 	fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedIndex))
@@ -168,7 +162,7 @@ func printWithRegAndMatchedFileName(reg *regexp.Regexp, fileName string, prefix 
 }
 
 func getDisplayFileName(fileName string) string {
-	return truncateString(fileName, 76)
+	return truncateString(fileName, (gTerminalColumnNumber-4)*9/10)
 }
 
 func addStringIntoAString(originalStr string, insertedIndex int, insertedString string) string {
@@ -198,37 +192,4 @@ func selectCurrentFile() int {
 		return 2
 	}
 	return 0
-}
-
-func truncateString(input string, maxLength int) string {
-
-	if len(input) <= maxLength {
-		return input
-	}
-	// 中间四个....
-	halfMaxLength := maxLength/2 - 2
-
-	runeSlice := []rune(input)
-	leftRuneByteLength := 0
-	rightRuneByteLength := 0
-	var leftRuneSlice []rune
-	var rightRuneSlice []rune
-	for i, r := range runeSlice {
-		byteLength := utf8.RuneLen(r)
-		leftRuneByteLength = leftRuneByteLength + byteLength
-		if leftRuneByteLength >= halfMaxLength {
-			leftRuneSlice = runeSlice[0:i]
-			break
-		}
-	}
-	for i := len(runeSlice) - 1; i >= 0; i-- {
-		r := runeSlice[i]
-		byteLength := utf8.RuneLen(r)
-		rightRuneByteLength = rightRuneByteLength + byteLength
-		if rightRuneByteLength >= halfMaxLength {
-			rightRuneSlice = runeSlice[i+1:]
-			break
-		}
-	}
-	return string(leftRuneSlice) + "...." + string(rightRuneSlice)
 }
