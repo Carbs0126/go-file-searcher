@@ -13,3 +13,10 @@
 ## 编译
 1. 在项目根目录下使用命令``go get``;
 2. 在项目根目录下使用命令``go build``;
+
+## 感谢
+1. 开源项目
+   - github.com/eiannone/keyboard
+   - golang.org/x/sys
+2. 参考资料
+   - ANSI转义序列 https://zh.wikipedia.org/wiki/ANSI%E8%BD%AC%E4%B9%89%E5%BA%8F%E5%88%97

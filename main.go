@@ -20,23 +20,21 @@ var gTerminalColumnNumber = 0
 var gTerminalRowNumber = 0
 
 func main() {
+	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
+	printInstructions()
 	args := os.Args[1:]
 	argsLength := len(args)
 	if argsLength == 0 {
 		printCurrentDirFiles(nil)
-		return
+	} else {
+		var wordSB strings.Builder
+		for i := 0; i < argsLength; i++ {
+			wordSB.WriteString(args[i])
+		}
+		pattern := wordSB.String()
+		re := regexp.MustCompile("(?i)" + pattern)
+		printCurrentDirFiles(re)
 	}
-	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
-	printInstructions()
-	var wordSB strings.Builder
-	for i := 0; i < argsLength; i++ {
-		wordSB.WriteString(args[i])
-	}
-
-	pattern := wordSB.String()
-	re := regexp.MustCompile("(?i)" + pattern)
-	printCurrentDirFiles(re)
-
 	if len(gFileDisplayNames) == 0 {
 		fmt.Println("Search result is empty.")
 		return
