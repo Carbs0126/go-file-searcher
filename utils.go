@@ -9,12 +9,18 @@ import (
 	"unicode/utf8"
 )
 
+var gInstructions = []string{
+	"|---------------- Instructions ----------------|",
+	"| 1. Press ESC to quit.                        |",
+	"| 2. Press ↑ or ↓ to select a file.            |",
+	"| 3. Press ← or → to switch screen.            |",
+	"| 4. Press Enter to open the selected file.    |",
+	"|----------------------------------------------|"}
+
 func printInstructions() {
-	fmt.Println("|---------------- Instructions ----------------|")
-	fmt.Println("| 1. Press ESC to quit.                        |")
-	fmt.Println("| 2. Press ↑ or ↓ to select a file.            |")
-	fmt.Println("| 3. Press Enter to open the selected file.    |")
-	fmt.Println("|----------------------------------------------|")
+	for _, value := range gInstructions {
+		fmt.Println(value)
+	}
 }
 
 func getTerminalColumns() (int, error) {
@@ -92,3 +98,19 @@ func truncateString(input string, maxLength int) string {
 	}
 	return string(leftRuneSlice) + "...." + string(rightRuneSlice)
 }
+
+//func getCursorLine() (string, error) {
+//	cmd := exec.Command("tput", "cup")
+//	output, err := cmd.CombinedOutput()
+//	if err != nil {
+//		return "", err
+//	}
+//	fmt.Println("--->" + string(output) + "<---")
+//	// 解析命令输出，获取行号
+//	values := strings.Fields(string(output))
+//	if len(values) != 2 {
+//		return "", fmt.Errorf("unexpected output format")
+//	}
+//
+//	return values[0], nil
+//}

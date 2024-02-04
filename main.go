@@ -3,32 +3,40 @@ package main
 import (
 	"fmt"
 	"github.com/eiannone/keyboard"
+	"os"
 	"os/exec"
 	"path/filepath"
-	//"golang.org/x/term"
-
-	//"golang.org/x/term"
-	"os"
 	"regexp"
 	"strings"
 )
+
+var gFileDisplayNamesGroup = make([][]string, 0, 16)
+var gSelectedGroup = 0
 
 var gFileDisplayNames = make([]string, 0, 16)
 var gFileRealNames = make([]string, 0, 16)
 var gSelectedIndex = 0
 var gTerminalColumnNumber = 0
 var gTerminalRowNumber = 0
+var gSwitchScreenLine = 0
 
 func main() {
 	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
-	printInstructions()
 	args := os.Args[1:]
 	argsLength := len(args)
 	if argsLength == 0 {
 		printCurrentDirFiles(nil)
+	} else if args[0] == "-help" && argsLength == 1 {
+		printInstructions()
+		return
 	} else {
 		var wordSB strings.Builder
-		for i := 0; i < argsLength; i++ {
+		var firstKeywordIndex = 0
+		if args[0] == "-help" {
+			printInstructions()
+			firstKeywordIndex = 1
+		}
+		for i := firstKeywordIndex; i < argsLength; i++ {
 			wordSB.WriteString(args[i])
 		}
 		pattern := wordSB.String()
