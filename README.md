@@ -8,6 +8,8 @@
 ## 示例
 ![image](https://github.com/Carbs0126/go-file-searcher/assets/14228871/03cff9fd-a718-4d45-a79a-5164b5009842)
 ![image](https://github.com/Carbs0126/go-file-searcher/assets/14228871/3a0a2faf-cf06-4f7e-afe8-ab7d68d010f7)
+![image](https://github.com/Carbs0126/go-file-searcher/assets/14228871/fee612ef-8c19-440f-9488-23f4151838de)
+注：上图的`se`是将`go-file-searcher`的执行文件重新命名并添加到系统路径中。进入`.gradle`文件夹下，搜索所有文件名中带有 `gradle` 和 `all` 的文件。
 
 ## 使用
 1. 命令行进入要搜索的文件夹目录下；
