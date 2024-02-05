@@ -34,6 +34,7 @@ var gInstructions = []string{
 	"| 2. Press ↑ or ↓ to select a file.                            |",
 	"| 3. Press ← or → to switch screen.                            |",
 	"| 4. Press Enter to open the selected file.                    |",
+	"| 4. Press Space to open the selected file's Directory.        |",
 	"| 5. Add -r to recursively walks through current directories.  |",
 	"|--------------------------------------------------------------|"}
 
@@ -369,7 +370,24 @@ func selectCurrentFile() int {
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error executing command:", err)
+		fmt.Println("Error occurred when executing command:", err)
+		return 2
+	}
+	return 0
+}
+
+func selectCurrentFilesParentDir() int {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return 1
+	}
+	cmd := exec.Command("open",
+		filepath.Dir(filepath.Join(currentDir, gFileRealNames[gSelectedGroupIndex*gSwitchScreenLines+gSelectedLineIndex])))
+	// 获取命令的输出
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error occurred when executing command:", err)
 		return 2
 	}
 	return 0

@@ -67,19 +67,22 @@ func main() {
 
 	err := keyboard.Open()
 	if err != nil {
-		fmt.Println("Error opening keyboard:", err)
-		os.Exit(1)
+		fmt.Println("Error occurred when opening keyboard:", err)
+		return
 	}
 	defer keyboard.Close()
 
+	keysEvents, err := keyboard.GetKeys(10)
+	if err != nil {
+		fmt.Println("Error occurred when getting keys:", err)
+		return
+	}
 	for {
-		_, key, err := keyboard.GetKey()
-		if err != nil {
-			fmt.Println("Error reading keyboard input:", err)
-			break
+		event := <-keysEvents
+		if event.Err != nil {
+			panic(event.Err)
 		}
-
-		if key == keyboard.KeyArrowUp {
+		if event.Key == keyboard.KeyArrowUp {
 			if gSelectedLineIndex <= 0 {
 				continue
 			}
@@ -90,7 +93,7 @@ func main() {
 				clearPreviousNthLines(1)
 				printCurrentLineWithSelectedDisplayName()
 			}
-		} else if key == keyboard.KeyArrowDown {
+		} else if event.Key == keyboard.KeyArrowDown {
 			if gSelectedLineIndex >= getSelectedGroupDisplayFileNamesLength()-1 {
 				continue
 			}
@@ -100,7 +103,7 @@ func main() {
 			clearNextLine()
 			fmt.Print("\r")
 			printCurrentLineWithSelectedDisplayName()
-		} else if key == keyboard.KeyArrowRight {
+		} else if event.Key == keyboard.KeyArrowRight {
 			// 切屏
 			if gSelectedGroupIndex >= getGroupLength()-1 {
 				continue
@@ -136,7 +139,7 @@ func main() {
 			gSelectedLineIndex = selectedLineIndex
 			clearCurrentLine()
 			printCurrentLineWithSelectedDisplayName()
-		} else if key == keyboard.KeyArrowLeft {
+		} else if event.Key == keyboard.KeyArrowLeft {
 			// 切屏
 			if gSelectedGroupIndex <= 0 {
 				continue
@@ -166,14 +169,22 @@ func main() {
 			gSelectedLineIndex = selectedLineIndex
 			clearCurrentLine()
 			printCurrentLineWithSelectedDisplayName()
-		} else if key == keyboard.KeyEsc {
+		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) {
 			clearCurrentLine()
 			printCurrentLineWithUnselectedDisplayName()
 			fmt.Print("\r")
 			clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
 			break
-		} else if key == keyboard.KeyEnter {
+		} else if event.Key == keyboard.KeyEnter {
+			// 打开文件
 			ret := selectCurrentFile()
+			if ret == 0 {
+				clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
+				break
+			}
+		} else if event.Key == keyboard.KeySpace {
+			// 打开文件的父目录
+			ret := selectCurrentFilesParentDir()
 			if ret == 0 {
 				clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
 				break
