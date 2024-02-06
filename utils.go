@@ -227,8 +227,8 @@ func clearNextNthLine(nth int) {
 	fmt.Print("\033[2K") // ANSI escape code to clear the line
 }
 
-func printCurrentLineWithUnselectedDisplayName() {
-	fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, gSelectedGroupIndex, gSelectedLineIndex))
+func printCurrentLineWithUnselectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
+	fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, selectedGroupIndex, selectedLineIndex))
 }
 
 func printCurrentLineWithSelectedDisplayName() {

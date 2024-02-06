@@ -83,95 +83,54 @@ func main() {
 			panic(event.Err)
 		}
 		if event.Key == keyboard.KeyArrowUp {
-			if gSelectedLineIndex <= 0 {
+			if gSelectedLineIndex < 0 {
 				continue
-			}
-			clearCurrentLine()
-			printCurrentLineWithUnselectedDisplayName()
-			gSelectedLineIndex = gSelectedLineIndex - 1
-			if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength() {
-				clearPreviousNthLines(1)
-				printCurrentLineWithSelectedDisplayName()
+			} else if gSelectedLineIndex == 0 {
+				if 0 < gSelectedGroupIndex {
+					showPreviousPage(gSelectedLineIndex, gMaxLineLength-1)
+				}
+			} else {
+				clearCurrentLine()
+				printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+				gSelectedLineIndex = gSelectedLineIndex - 1
+				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength() {
+					clearPreviousNthLines(1)
+					printCurrentLineWithSelectedDisplayName()
+				}
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
-			if gSelectedLineIndex >= getSelectedGroupDisplayFileNamesLength()-1 {
-				continue
+			if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
+				// 当前页面
+				clearCurrentLine()
+				printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+				gSelectedLineIndex = gSelectedLineIndex + 1
+				clearNextLine()
+				fmt.Print("\r")
+				printCurrentLineWithSelectedDisplayName()
+			} else {
+				if gSelectedGroupIndex < getGroupLength()-1 {
+					// 如果有下一页，则进入下一页
+					showNextPage(gSelectedLineIndex, 0)
+				} else {
+					// 没有下一页，到底了
+					continue
+				}
 			}
-			clearCurrentLine()
-			printCurrentLineWithUnselectedDisplayName()
-			gSelectedLineIndex = gSelectedLineIndex + 1
-			clearNextLine()
-			fmt.Print("\r")
-			printCurrentLineWithSelectedDisplayName()
 		} else if event.Key == keyboard.KeyArrowRight {
 			// 切屏
 			if gSelectedGroupIndex >= getGroupLength()-1 {
 				continue
 			}
-			gSelectedGroupIndex = gSelectedGroupIndex + 1
-			if gSelectedLineIndex >= getSelectedGroupDisplayFileNamesLength() {
-				deltaUp := gSelectedLineIndex - getSelectedGroupDisplayFileNamesLength() + 1
-				gSelectedLineIndex = getSelectedGroupDisplayFileNamesLength() - 1
-				// 然后定位光标
-				moveCursorToPreviousNthLines(deltaUp)
-			}
-			// 先记一下刚才的selectedLineIndex，清屏后再回到这个位置
-			selectedLineIndex := gSelectedLineIndex
-			moveCursorToPreviousNthLines(selectedLineIndex)
-			for i := 0; i < gMaxLineLength; i++ {
-				clearCurrentLine()
-				fmt.Print("\r")
-				if i < gMaxLineLength-1 {
-					moveCursorToNextNthLines(1)
-				}
-			}
-			moveCursorToPreviousNthLines(gMaxLineLength - 1)
-			for i := 0; i < getSelectedGroupDisplayFileNamesLength(); i++ {
-				clearCurrentLine()
-				gSelectedLineIndex = i
-				printCurrentLineWithUnselectedDisplayName()
-				fmt.Print("\r")
-				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
-					moveCursorToNextNthLines(1)
-				}
-			}
-			moveCursorToPreviousNthLines(gSelectedLineIndex - selectedLineIndex)
-			gSelectedLineIndex = selectedLineIndex
-			clearCurrentLine()
-			printCurrentLineWithSelectedDisplayName()
+			showNextPage(gSelectedLineIndex, gSelectedLineIndex)
 		} else if event.Key == keyboard.KeyArrowLeft {
 			// 切屏
 			if gSelectedGroupIndex <= 0 {
 				continue
 			}
-			gSelectedGroupIndex = gSelectedGroupIndex - 1
-			// 先记一下刚才的selectedLineIndex，清屏后再回到这个位置
-			selectedLineIndex := gSelectedLineIndex
-			moveCursorToPreviousNthLines(selectedLineIndex)
-			for i := 0; i < gMaxLineLength; i++ {
-				clearCurrentLine()
-				fmt.Print("\r")
-				if i < gMaxLineLength-1 {
-					moveCursorToNextNthLines(1)
-				}
-			}
-			moveCursorToPreviousNthLines(gMaxLineLength - 1)
-			for i := 0; i < getSelectedGroupDisplayFileNamesLength(); i++ {
-				clearCurrentLine()
-				gSelectedLineIndex = i
-				printCurrentLineWithUnselectedDisplayName()
-				fmt.Print("\r")
-				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
-					moveCursorToNextNthLines(1)
-				}
-			}
-			moveCursorToPreviousNthLines(gSelectedLineIndex - selectedLineIndex)
-			gSelectedLineIndex = selectedLineIndex
-			clearCurrentLine()
-			printCurrentLineWithSelectedDisplayName()
+			showPreviousPage(gSelectedLineIndex, gSelectedLineIndex)
 		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) {
 			clearCurrentLine()
-			printCurrentLineWithUnselectedDisplayName()
+			printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 			fmt.Print("\r")
 			clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
 			break
@@ -191,4 +150,74 @@ func main() {
 			}
 		}
 	}
+}
+
+func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
+	gSelectedGroupIndex = gSelectedGroupIndex + 1
+	// 光标先移动到最上面
+	moveCursorToPreviousNthLines(oldSelectedLineIndex)
+	// 遍历并清空屏幕
+	for i := 0; i < gMaxLineLength; i++ {
+		clearCurrentLine()
+		fmt.Print("\r")
+		if i < gMaxLineLength-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 光标移动到最上面
+	moveCursorToPreviousNthLines(gMaxLineLength - 1)
+	// 遍历并打印当前group的屏幕内容
+	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength()
+	for i := 0; i < currentGroupLinesLength; i++ {
+		clearCurrentLine()
+		printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, i)
+		fmt.Print("\r")
+		if i < currentGroupLinesLength-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 确保 newSelectedLineIndex 不超过当前页面内容
+	if newSelectedLineIndex >= currentGroupLinesLength {
+		newSelectedLineIndex = currentGroupLinesLength - 1
+	}
+	// 从当前内容的最后一行，定位到想要光标定位的行
+	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
+	gSelectedLineIndex = newSelectedLineIndex
+	clearCurrentLine()
+	printCurrentLineWithSelectedDisplayName()
+}
+
+func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
+	gSelectedGroupIndex = gSelectedGroupIndex - 1
+	// 光标先移动到最上面
+	moveCursorToPreviousNthLines(oldPageSelectedLineIndex)
+	// 遍历并清空屏幕
+	for i := 0; i < gMaxLineLength; i++ {
+		clearCurrentLine()
+		fmt.Print("\r")
+		if i < gMaxLineLength-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 光标移动到最上面
+	moveCursorToPreviousNthLines(gMaxLineLength - 1)
+	// 遍历并打印当前group的屏幕内容
+	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength()
+	for i := 0; i < currentGroupLinesLength; i++ {
+		clearCurrentLine()
+		printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, i)
+		fmt.Print("\r")
+		if i < currentGroupLinesLength-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 确保 newSelectedLineIndex 不超过当前页面内容
+	if newSelectedLineIndex >= currentGroupLinesLength {
+		newSelectedLineIndex = currentGroupLinesLength - 1
+	}
+	// 从当前内容的最后一行，定位到想要光标定位的行
+	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
+	gSelectedLineIndex = newSelectedLineIndex
+	clearCurrentLine()
+	printCurrentLineWithSelectedDisplayName()
 }
