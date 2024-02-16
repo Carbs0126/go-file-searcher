@@ -1,5 +1,9 @@
 package main
 
+import (
+	"time"
+)
+
 type TerminalState struct {
 	// 命令行屏幕列数
 	TerminalColumnNumber int
@@ -27,12 +31,16 @@ type CommandState struct {
 }
 
 type SearchData struct {
+	// 文件信息
+	FileDataArr []FileData
 	// 所有文件名称，第一维是屏幕
 	DisplayFileNamesInGroup [][]string
-	// 所有文件名称
-	DisplayFileNames []string
-	// 文件真实名称，从当前目录开始
-	RealFileNames []string
+}
+
+type FileData struct {
+	DisplayFileName string
+	FilePath        string
+	Time            time.Time
 }
 
 var gTerminalState TerminalState
@@ -55,8 +63,23 @@ func initStateData() {
 		SearchPattern: "",
 	}
 	gSearchData = SearchData{
+		FileDataArr:             make([]FileData, 0, 32),
 		DisplayFileNamesInGroup: make([][]string, 0, 2),
-		DisplayFileNames:        make([]string, 0, 16),
-		RealFileNames:           make([]string, 0, 16),
 	}
+}
+
+// 针对 FileData 的排序
+
+type FileDataSlice []FileData
+
+func (fd FileDataSlice) Len() int {
+	return len(fd)
+}
+
+func (fd FileDataSlice) Less(i, j int) bool {
+	return (fd[i].Time.UnixMilli() - fd[j].Time.UnixMilli()) > 0
+}
+
+func (fd FileDataSlice) Swap(i, j int) {
+	fd[i], fd[j] = fd[j], fd[i]
 }

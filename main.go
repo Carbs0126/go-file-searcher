@@ -6,15 +6,6 @@ import (
 	"regexp"
 )
 
-// 所有文件名称，第一维是屏幕
-//var gDisplayFileNamesInGroup = make([][]string, 0, 2)
-
-// 所有文件名称
-//var gDisplayFileNames = make([]string, 0, 16)
-
-// 文件真实名称，从当前目录开始
-//var gRealFileNames = make([]string, 0, 16)
-
 func main() {
 	initStateData()
 	getTerminalColumnsAndRows()
@@ -33,7 +24,7 @@ func main() {
 	}
 	printCurrentDirFiles(re)
 
-	if len(gSearchData.DisplayFileNames) == 0 {
+	if len(gSearchData.FileDataArr) == 0 {
 		fmt.Println("Search results are Empty.")
 		return
 	}

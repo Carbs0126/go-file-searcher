@@ -1,7 +1,7 @@
 # go-file-searcher
 在mac操作系统的某个目录下，根据关键字搜索匹配该目录下的所有名称，并可以直接在命令行中打开
 ```
-./go-file-searcher keywords-you-want-to-search  [-h] [-r]
+./go-file-searcher keywords-you-want-to-search  [-h] [-r] [-t]
 ```
 `keywords-you-want-to-search`可以使用空格隔开，如 `./go-file-searcher read .md` 可以搜索当前目录下文件名（忽略大小写）匹配 `read.*\.md`正则表达式的结果；
 
@@ -17,46 +17,46 @@
 3. 当文件较多，输出的行数大于一屏时，会自动切屏。此时点击左右箭头，可以切屏展示其它文件；
 4. 在任何一个参数位置输入`-help`或者`-h`，将会获取使用帮助；
 5. 在任何一个参数位置输入`-recursive`或者`-r`，将会递归遍历当前文件夹下的所有子文件夹；
+6. 在任何一个参数位置输入`-time`或者`-t`，会把结果按照时间顺序排列显示，最后更新的文件会显示在最开始位置；
 
 ## 编译源码
 1. 在项目根目录下使用命令``go get``；
 2. 在项目根目录下使用命令``go build``，即可在项目根目录下得到 `go-file-searcher` 可执行文件；
 
 ## TODO
-1. 添加按照创建时间显示
-2. 点击`空格`弹出菜单，进而进行选择并弹出对话框
-```
-[F] >  android/someproject   
-[F]    +-----------------------+   +----------------------------------------+ 
-[F]    | > Info            [I] |   |              File Info                 |
-[F]    |   CD into         [C] |   |    Size:  300000 Byte (3MB)            |
-[F]    |   Delete          [D] |   |    Type:  jpeg  |  1920x1080           |
-[F]    |   Parent Folder   [P] |   |  Create:  1970.01.01 20:00:01          |
-[F]    |   Open File   [Enter] |   +----------------------------------------+
-[F]    |   Close         [Esc] |
-[F]    |   Rename          [R] |
-[F]    +-----------------------+
-[F]    abcdefg.txt
-```
 
-3. 对话框？
-```
-   Esc   : dismiss dialog
-   Enter : select and dismiss dialog
-   
-   +-------------------------------------+ 
-   |         Delete This File ?          |
-   |                                     |
-   |       [Yes]            No           |
-   +-------------------------------------+
-   
-   +----------------------------------------+ 
-   |              File Info                 |
-   |    Size:  300000 Byte (3MB)            |
-   |    Type:  jpeg  |  1920x1080           |
-   |  Create:  1970.01.01 20:00:01          |
-   +----------------------------------------+
-```
+1. 点击`空格`弹出菜单，进而进行选择并弹出对话框
+   ```
+      [F] >  android/someproject   
+      [F]    +-----------------------+   +----------------------------------------+ 
+      [F]    | > Info            [I] |   |              File Info                 |
+      [F]    |   CD into         [C] |   |    Size:  300000 Byte (3MB)            |
+      [F]    |   Delete          [D] |   |    Type:  jpeg  |  1920x1080           |
+      [F]    |   Parent Folder   [P] |   |  Create:  1970.01.01 20:00:01          |
+      [F]    |   Open File   [Enter] |   +----------------------------------------+
+      [F]    |   Close         [Esc] |
+      [F]    |   Rename          [R] |
+      [F]    +-----------------------+
+      [F]    abcdefg.txt
+   ```
+2. 对话框？
+   ```
+      Esc   : dismiss dialog
+      Enter : select and dismiss dialog
+      
+      +-------------------------------------+ 
+      |         Delete This File ?          |
+      |                                     |
+      |       [Yes]            No           |
+      +-------------------------------------+
+      
+      +----------------------------------------+ 
+      |              File Info                 |
+      |    Size:  300000 Byte (3MB)            |
+      |    Type:  jpeg  |  1920x1080           |
+      |  Create:  1970.01.01 20:00:01          |
+      +----------------------------------------+
+   ```
 ## 感谢
 1. 开源项目
    - github.com/eiannone/keyboard

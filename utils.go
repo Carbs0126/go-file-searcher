@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -43,6 +44,7 @@ var gInstructions = []string{
 	"| 4. Press Enter to open the selected file.                    |",
 	"| 4. Press Space to open the selected file's Directory.        |",
 	"| 5. Add -r to recursively walks through current directories.  |",
+	"| 6. Add -t to display files in update time order.             |",
 	"|--------------------------------------------------------------|"}
 
 func printHelpInstructions() {
@@ -69,14 +71,6 @@ func isArgRecursive(s string) bool {
 
 func isArgTime(s string) bool {
 	_, exists := gCommandTime[s]
-	if exists {
-		return true
-	}
-	return false
-}
-
-func isArgCommand(s string) bool {
-	_, exists := gCommands[s]
 	if exists {
 		return true
 	}
@@ -249,11 +243,11 @@ func clearNextNthLine(nth int) {
 }
 
 func printCurrentLineWithUnselectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
-	fmt.Print(getUnselectedFileNameByIndex(gSearchData.DisplayFileNames, selectedGroupIndex, selectedLineIndex))
+	fmt.Print(getUnselectedDisplayFileNameByIndex(gSearchData.FileDataArr, selectedGroupIndex, selectedLineIndex))
 }
 
 func printCurrentLineWithSelectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
-	fmt.Print(getSelectedFileNameByIndex(gSearchData.DisplayFileNames, selectedGroupIndex, selectedLineIndex))
+	fmt.Print(getSelectedDisplayFileNameByIndex(gSearchData.FileDataArr, selectedGroupIndex, selectedLineIndex))
 	fmt.Print("\r")
 }
 
@@ -283,11 +277,7 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 			if len(path) > len(currentDir)+1 {
 				filePath = path[len(currentDir)+1:]
 			}
-			if !fileInfo.IsDir() {
-				prepareMatchedFileName(reg, filePath, fileInfo.Name(), "[F]")
-			} else {
-				prepareMatchedFileName(reg, filePath, fileInfo.Name(), "[D]")
-			}
+			prepareMatchedFileInfo(reg, filePath, &fileInfo)
 			return nil
 		})
 	} else {
@@ -298,13 +288,19 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 		}
 		for _, file := range files {
 			fileName := file.Name()
-			if !file.IsDir() {
-				prepareMatchedFileName(reg, fileName, fileName, "[F]")
-			} else {
-				prepareMatchedFileName(reg, fileName, fileName, "[D]")
+			fileInfo, err := file.Info()
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
 			}
+			prepareMatchedFileInfo(reg, fileName, &fileInfo)
 		}
 	}
+	// 按照时间排序
+	if gCommandState.Time {
+		sort.Sort(FileDataSlice(gSearchData.FileDataArr))
+	}
+
 	prepareMatchedFileNameGroup()
 	displayCurrentFileNamesForFirstTime()
 }
@@ -338,13 +334,13 @@ func getSelectedGroupDisplayFileNames(displayFileNamesInGroup [][]string) []stri
 }
 
 func prepareMatchedFileNameGroup() {
-	groupLength := ceil(len(gSearchData.DisplayFileNames), gTerminalState.SwitchScreenLines)
+	groupLength := ceil(len(gSearchData.FileDataArr), gTerminalState.SwitchScreenLines)
 	for i := 0; i < groupLength; i++ {
 		oneScreenContent := make([]string, 0, gTerminalState.SwitchScreenLines)
 		for j := 0; j < gTerminalState.SwitchScreenLines; j++ {
 			indexOfFileName := i*gTerminalState.SwitchScreenLines + j
-			if indexOfFileName < len(gSearchData.DisplayFileNames) {
-				oneScreenContent = append(oneScreenContent, gSearchData.DisplayFileNames[indexOfFileName])
+			if indexOfFileName < len(gSearchData.FileDataArr) {
+				oneScreenContent = append(oneScreenContent, gSearchData.FileDataArr[indexOfFileName].DisplayFileName)
 			} else {
 				break
 			}
@@ -354,23 +350,35 @@ func prepareMatchedFileNameGroup() {
 	if groupLength == 0 {
 		gTerminalState.MaxLineLength = 0
 	} else if groupLength == 1 {
-		gTerminalState.MaxLineLength = len(gSearchData.DisplayFileNames)
+		gTerminalState.MaxLineLength = len(gSearchData.FileDataArr)
 	} else {
 		gTerminalState.MaxLineLength = gTerminalState.SwitchScreenLines
 	}
 }
 
-func prepareMatchedFileName(reg *regexp.Regexp, filePath string, fileName string, prefix string) {
+func prepareMatchedFileInfo(reg *regexp.Regexp, filePath string, fileInfo *os.FileInfo) {
+	prefix := "[F]"
+	if (*fileInfo).IsDir() {
+		prefix = "[D]"
+	}
 	if reg == nil {
-		str := prefix + "    " + getDisplayFileName(filePath)
-		gSearchData.DisplayFileNames = append(gSearchData.DisplayFileNames, str)
-		gSearchData.RealFileNames = append(gSearchData.RealFileNames, filePath)
+		displayFileName := prefix + "    " + getDisplayFileName(filePath)
+		fileData := FileData{
+			DisplayFileName: displayFileName,
+			FilePath:        filePath,
+			Time:            (*fileInfo).ModTime(),
+		}
+		gSearchData.FileDataArr = append(gSearchData.FileDataArr, fileData)
 	} else {
-		match := reg.MatchString(fileName)
+		match := reg.MatchString((*fileInfo).Name())
 		if match {
-			str := prefix + "    " + getDisplayFileName(filePath)
-			gSearchData.DisplayFileNames = append(gSearchData.DisplayFileNames, str)
-			gSearchData.RealFileNames = append(gSearchData.RealFileNames, filePath)
+			displayFileName := prefix + "    " + getDisplayFileName(filePath)
+			fileData := FileData{
+				DisplayFileName: displayFileName,
+				FilePath:        filePath,
+				Time:            (*fileInfo).ModTime(),
+			}
+			gSearchData.FileDataArr = append(gSearchData.FileDataArr, fileData)
 		}
 	}
 }
@@ -383,12 +391,12 @@ func addStringIntoAString(originalStr string, insertedIndex int, insertedString 
 	return originalStr[0:insertedIndex] + insertedString + originalStr[insertedIndex+1:]
 }
 
-func getSelectedFileNameByIndex(arr []string, selectedGroupIndex int, selectedLineIndex int) string {
-	return addStringIntoAString(arr[selectedGroupIndex*gTerminalState.SwitchScreenLines+selectedLineIndex], 4, ">")
+func getSelectedDisplayFileNameByIndex(arr []FileData, selectedGroupIndex int, selectedLineIndex int) string {
+	return addStringIntoAString(arr[selectedGroupIndex*gTerminalState.SwitchScreenLines+selectedLineIndex].DisplayFileName, 4, ">")
 }
 
-func getUnselectedFileNameByIndex(arr []string, selectedGroupIndex int, selectedLineIndex int) string {
-	return arr[selectedGroupIndex*gTerminalState.SwitchScreenLines+selectedLineIndex]
+func getUnselectedDisplayFileNameByIndex(arr []FileData, selectedGroupIndex int, selectedLineIndex int) string {
+	return arr[selectedGroupIndex*gTerminalState.SwitchScreenLines+selectedLineIndex].DisplayFileName
 }
 
 func selectCurrentFile() int {
@@ -397,7 +405,7 @@ func selectCurrentFile() int {
 		fmt.Println("Error:", err)
 		return 1
 	}
-	cmd := exec.Command("open", filepath.Join(currentDir, gSearchData.RealFileNames[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex]))
+	cmd := exec.Command("open", filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath))
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
 	if err != nil {
@@ -414,7 +422,7 @@ func selectCurrentFilesParentDir() int {
 		return 1
 	}
 	cmd := exec.Command("open",
-		filepath.Dir(filepath.Join(currentDir, gSearchData.RealFileNames[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex])))
+		filepath.Dir(filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath)))
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
 	if err != nil {
