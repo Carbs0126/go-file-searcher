@@ -3,67 +3,42 @@ package main
 import (
 	"fmt"
 	"github.com/eiannone/keyboard"
-	"os"
 	"regexp"
 )
 
-// 命令行屏幕列数
-var gTerminalColumnNumber = 0
-
-// 命令行屏幕行数
-var gTerminalRowNumber = 0
-
-// 当前屏幕光标所在行索引
-var gSelectedLineIndex = 0
-
-// 当前屏幕索引
-var gSelectedGroupIndex = 0
-
 // 所有文件名称，第一维是屏幕
-var gFileDisplayNamesGroup = make([][]string, 0, 2)
+//var gDisplayFileNamesInGroup = make([][]string, 0, 2)
 
 // 所有文件名称
-var gFileDisplayNames = make([]string, 0, 16)
+//var gDisplayFileNames = make([]string, 0, 16)
 
 // 文件真实名称，从当前目录开始
-var gFileRealNames = make([]string, 0, 16)
-
-// 一屏幕多少行显示文件
-var gSwitchScreenLines = 0
-
-// 所有屏幕最高的高度
-var gMaxLineLength = 0
-
-// 是否包含 -r 命令，递归遍历当前文件夹
-var gContainRecursive = false
+//var gRealFileNames = make([]string, 0, 16)
 
 func main() {
-	gTerminalColumnNumber, gTerminalRowNumber = getTerminalColumnsAndRows()
-	args := os.Args[1:]
-	argsLength := len(args)
-	if argsLength == 0 {
-		gSwitchScreenLines = gTerminalRowNumber - 2
-		printCurrentDirFiles(nil)
-	} else if argsLength == 1 && isArgHelp(args[0]) {
-		printInstructions()
+	initStateData()
+	getTerminalColumnsAndRows()
+	getCommandState()
+	getScreenLineNumber()
+	if onlyPrintHelpInstructions() {
+		printHelpInstructions()
 		return
-	} else {
-		gContainRecursive = containArgRecursive(args)
-		gSwitchScreenLines = gTerminalRowNumber - 2
-		if containArgHelp(args) {
-			printInstructions()
-			gSwitchScreenLines = gTerminalRowNumber - 2 - len(gInstructions)
-		}
-		pattern := getSearchPattern(args)
-		re := regexp.MustCompile("(?i)" + pattern)
-		printCurrentDirFiles(re)
 	}
-	if len(gFileDisplayNames) == 0 {
+	if gCommandState.Help {
+		printHelpInstructions()
+	}
+	var re *regexp.Regexp = nil
+	if len(gCommandState.SearchPattern) > 0 {
+		re = regexp.MustCompile("(?i)" + gCommandState.SearchPattern)
+	}
+	printCurrentDirFiles(re)
+
+	if len(gSearchData.DisplayFileNames) == 0 {
 		fmt.Println("Search results are Empty.")
 		return
 	}
-	clearPreviousNthLines(getSelectedGroupDisplayFileNamesLength())
-	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+	clearPreviousNthLines(getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup))
+	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 
 	err := keyboard.Open()
 	if err != nil {
@@ -83,34 +58,34 @@ func main() {
 			panic(event.Err)
 		}
 		if event.Key == keyboard.KeyArrowUp {
-			if gSelectedLineIndex < 0 {
+			if gTerminalState.SelectedLineIndex < 0 {
 				continue
-			} else if gSelectedLineIndex == 0 {
-				if 0 < gSelectedGroupIndex {
-					showPreviousPage(gSelectedLineIndex, gMaxLineLength-1)
+			} else if gTerminalState.SelectedLineIndex == 0 {
+				if 0 < gTerminalState.SelectedGroupIndex {
+					showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.MaxLineLength-1)
 				}
 			} else {
 				clearCurrentLine()
-				printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
-				gSelectedLineIndex = gSelectedLineIndex - 1
-				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength() {
+				printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - 1
+				if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup) {
 					clearPreviousNthLines(1)
-					printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+					printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 				}
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
-			if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength()-1 {
+			if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)-1 {
 				// 当前页面
 				clearCurrentLine()
-				printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
-				gSelectedLineIndex = gSelectedLineIndex + 1
+				printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex + 1
 				clearNextLine()
 				fmt.Print("\r")
-				printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+				printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 			} else {
-				if gSelectedGroupIndex < getGroupLength()-1 {
+				if gTerminalState.SelectedGroupIndex < getGroupLength(gSearchData.DisplayFileNamesInGroup)-1 {
 					// 如果有下一页，则进入下一页
-					showNextPage(gSelectedLineIndex, 0)
+					showNextPage(gTerminalState.SelectedLineIndex, 0)
 				} else {
 					// 没有下一页，到底了
 					continue
@@ -118,34 +93,34 @@ func main() {
 			}
 		} else if event.Key == keyboard.KeyArrowRight {
 			// 切屏
-			if gSelectedGroupIndex >= getGroupLength()-1 {
+			if gTerminalState.SelectedGroupIndex >= getGroupLength(gSearchData.DisplayFileNamesInGroup)-1 {
 				continue
 			}
-			showNextPage(gSelectedLineIndex, gSelectedLineIndex)
+			showNextPage(gTerminalState.SelectedLineIndex, gTerminalState.SelectedLineIndex)
 		} else if event.Key == keyboard.KeyArrowLeft {
 			// 切屏
-			if gSelectedGroupIndex <= 0 {
+			if gTerminalState.SelectedGroupIndex <= 0 {
 				continue
 			}
-			showPreviousPage(gSelectedLineIndex, gSelectedLineIndex)
+			showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.SelectedLineIndex)
 		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) {
 			clearCurrentLine()
-			printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+			printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 			fmt.Print("\r")
-			clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
+			clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
 			break
 		} else if event.Key == keyboard.KeyEnter {
 			// 打开文件
 			ret := selectCurrentFile()
 			if ret == 0 {
-				clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
+				clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
 				break
 			}
 		} else if event.Key == keyboard.KeySpace {
 			// 打开文件的父目录
 			ret := selectCurrentFilesParentDir()
 			if ret == 0 {
-				clearNextNthLine(gMaxLineLength - gSelectedLineIndex)
+				clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
 				break
 			}
 		}
@@ -153,24 +128,24 @@ func main() {
 }
 
 func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
-	gSelectedGroupIndex = gSelectedGroupIndex + 1
+	gTerminalState.SelectedGroupIndex = gTerminalState.SelectedGroupIndex + 1
 	// 光标先移动到最上面
 	moveCursorToPreviousNthLines(oldSelectedLineIndex)
 	// 遍历并清空屏幕
-	for i := 0; i < gMaxLineLength; i++ {
+	for i := 0; i < gTerminalState.MaxLineLength; i++ {
 		clearCurrentLine()
 		fmt.Print("\r")
-		if i < gMaxLineLength-1 {
+		if i < gTerminalState.MaxLineLength-1 {
 			moveCursorToNextNthLines(1)
 		}
 	}
 	// 光标移动到最上面
-	moveCursorToPreviousNthLines(gMaxLineLength - 1)
+	moveCursorToPreviousNthLines(gTerminalState.MaxLineLength - 1)
 	// 遍历并打印当前group的屏幕内容
-	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength()
+	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)
 	for i := 0; i < currentGroupLinesLength; i++ {
 		clearCurrentLine()
-		printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, i)
+		printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
 		fmt.Print("\r")
 		if i < currentGroupLinesLength-1 {
 			moveCursorToNextNthLines(1)
@@ -182,30 +157,30 @@ func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
 	}
 	// 从当前内容的最后一行，定位到想要光标定位的行
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
-	gSelectedLineIndex = newSelectedLineIndex
+	gTerminalState.SelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 }
 
 func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
-	gSelectedGroupIndex = gSelectedGroupIndex - 1
+	gTerminalState.SelectedGroupIndex = gTerminalState.SelectedGroupIndex - 1
 	// 光标先移动到最上面
 	moveCursorToPreviousNthLines(oldPageSelectedLineIndex)
 	// 遍历并清空屏幕
-	for i := 0; i < gMaxLineLength; i++ {
+	for i := 0; i < gTerminalState.MaxLineLength; i++ {
 		clearCurrentLine()
 		fmt.Print("\r")
-		if i < gMaxLineLength-1 {
+		if i < gTerminalState.MaxLineLength-1 {
 			moveCursorToNextNthLines(1)
 		}
 	}
 	// 光标移动到最上面
-	moveCursorToPreviousNthLines(gMaxLineLength - 1)
+	moveCursorToPreviousNthLines(gTerminalState.MaxLineLength - 1)
 	// 遍历并打印当前group的屏幕内容
-	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength()
+	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)
 	for i := 0; i < currentGroupLinesLength; i++ {
 		clearCurrentLine()
-		printCurrentLineWithUnselectedDisplayName(gSelectedGroupIndex, i)
+		printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
 		fmt.Print("\r")
 		if i < currentGroupLinesLength-1 {
 			moveCursorToNextNthLines(1)
@@ -217,7 +192,7 @@ func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
 	}
 	// 从当前内容的最后一行，定位到想要光标定位的行
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
-	gSelectedLineIndex = newSelectedLineIndex
+	gTerminalState.SelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
+	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 }
