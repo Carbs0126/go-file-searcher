@@ -22,6 +22,41 @@
 1. 在项目根目录下使用命令``go get``；
 2. 在项目根目录下使用命令``go build``，即可在项目根目录下得到 `go-file-searcher` 可执行文件；
 
+## TODO
+1. 添加按照创建时间显示
+2. 点击`空格`弹出菜单，进而进行选择并弹出对话框
+```
+[F] >  android/someproject   
+[F]    +-----------------------+   +----------------------------------------+ 
+[F]    | > Info            [I] |   |              File Info                 |
+[F]    |   CD into         [C] |   |    Size:  300000 Byte (3MB)            |
+[F]    |   Delete          [D] |   |    Type:  jpeg  |  1920x1080           |
+[F]    |   Parent Folder   [P] |   |  Create:  1970.01.01 20:00:01          |
+[F]    |   Open File   [Enter] |   +----------------------------------------+
+[F]    |   Close         [Esc] |
+[F]    |   Rename          [R] |
+[F]    +-----------------------+
+[F]    abcdefg.txt
+```
+
+3. 对话框？
+```
+   Esc   : dismiss dialog
+   Enter : select and dismiss dialog
+   
+   +-------------------------------------+ 
+   |         Delete This File ?          |
+   |                                     |
+   |       [Yes]            No           |
+   +-------------------------------------+
+   
+   +----------------------------------------+ 
+   |              File Info                 |
+   |    Size:  300000 Byte (3MB)            |
+   |    Type:  jpeg  |  1920x1080           |
+   |  Create:  1970.01.01 20:00:01          |
+   +----------------------------------------+
+```
 ## 感谢
 1. 开源项目
    - github.com/eiannone/keyboard

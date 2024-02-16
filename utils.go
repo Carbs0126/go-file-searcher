@@ -231,8 +231,8 @@ func printCurrentLineWithUnselectedDisplayName(selectedGroupIndex int, selectedL
 	fmt.Print(getUnselectedFileNameByIndex(gFileDisplayNames, selectedGroupIndex, selectedLineIndex))
 }
 
-func printCurrentLineWithSelectedDisplayName() {
-	fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, gSelectedGroupIndex, gSelectedLineIndex))
+func printCurrentLineWithSelectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
+	fmt.Print(getSelectedFileNameByIndex(gFileDisplayNames, selectedGroupIndex, selectedLineIndex))
 	fmt.Print("\r")
 }
 

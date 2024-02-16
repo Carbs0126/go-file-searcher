@@ -63,7 +63,7 @@ func main() {
 		return
 	}
 	clearPreviousNthLines(getSelectedGroupDisplayFileNamesLength())
-	printCurrentLineWithSelectedDisplayName()
+	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 
 	err := keyboard.Open()
 	if err != nil {
@@ -95,7 +95,7 @@ func main() {
 				gSelectedLineIndex = gSelectedLineIndex - 1
 				if gSelectedLineIndex < getSelectedGroupDisplayFileNamesLength() {
 					clearPreviousNthLines(1)
-					printCurrentLineWithSelectedDisplayName()
+					printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 				}
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
@@ -106,7 +106,7 @@ func main() {
 				gSelectedLineIndex = gSelectedLineIndex + 1
 				clearNextLine()
 				fmt.Print("\r")
-				printCurrentLineWithSelectedDisplayName()
+				printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 			} else {
 				if gSelectedGroupIndex < getGroupLength()-1 {
 					// 如果有下一页，则进入下一页
@@ -184,7 +184,7 @@ func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
 	gSelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName()
+	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 }
 
 func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
@@ -219,5 +219,5 @@ func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
 	gSelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName()
+	printCurrentLineWithSelectedDisplayName(gSelectedGroupIndex, gSelectedLineIndex)
 }
