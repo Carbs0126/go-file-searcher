@@ -94,7 +94,7 @@ func main() {
 				continue
 			}
 			showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.SelectedLineIndex)
-		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) {
+		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) || (event.Rune == 'Q') || (event.Rune == 'q') {
 			clearCurrentLine()
 			printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 			fmt.Print("\r")
