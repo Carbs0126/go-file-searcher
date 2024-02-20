@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/eiannone/keyboard"
 	"regexp"
+	"runtime"
 )
 
 func main() {
@@ -94,28 +95,141 @@ func main() {
 				continue
 			}
 			showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.SelectedLineIndex)
-		} else if (event.Key == keyboard.KeyEsc) || (event.Key == keyboard.KeyCtrlC) || (event.Rune == 'Q') || (event.Rune == 'q') {
-			clearCurrentLine()
-			printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
-			fmt.Print("\r")
+		} else if (event.Key == keyboard.KeyEsc) || (event.Rune == 'Q') || (event.Rune == 'q') {
+			if gTerminalState.CurrentMenuLevel > 0 {
+				if gTerminalState.CurrentMenuLevel == 1 {
+					dismissMenuLevel1()
+				}
+			} else {
+				restoreCurrentLineWithSearchResult()
+				clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
+				break
+			}
+		} else if event.Key == keyboard.KeyCtrlC {
+			restoreCurrentLineWithSearchResult()
 			clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
 			break
 		} else if event.Key == keyboard.KeyEnter {
-			// 打开文件
-			ret := selectCurrentFile()
-			if ret == 0 {
-				clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
-				break
+			if isMac() {
+				// 打开文件
+				ret := openCurrentFile()
+				if ret == 0 {
+					clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
+					break
+				}
+			} else {
+				popMenu()
+			}
+		} else if (event.Rune == 'P') || (event.Rune == 'p') {
+			if isMac() {
+				// 打开文件的父目录
+				ret := openCurrentFilesParentDir()
+				if ret == 0 {
+					clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
+					break
+				}
+			} else {
+				popMenu()
 			}
 		} else if event.Key == keyboard.KeySpace {
-			// 打开文件的父目录
-			ret := selectCurrentFilesParentDir()
-			if ret == 0 {
-				clearNextNthLine(gTerminalState.MaxLineLength - gTerminalState.SelectedLineIndex)
-				break
-			}
+			popMenu()
 		}
 	}
+}
+
+func restoreCurrentLineWithSearchResult() {
+	clearCurrentLine()
+	printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+	fmt.Print("\r")
+}
+
+func isLinux() bool {
+	return runtime.GOOS == "linux"
+}
+
+func isMac() bool {
+	return runtime.GOOS == "darwin"
+}
+
+// 打开菜单对话框
+func popMenu() {
+	if gTerminalState.CurrentMenuLevel == 0 {
+		gTerminalState.CurrentMenuLevel = 1
+		popMenuLevel1()
+	}
+}
+
+func popMenuLevel1() {
+	// 菜单高度
+	gTerminalState.MenuHeight = len(gMenu)
+	// 菜单距离左侧 16 个字符
+	gTerminalState.MenuLeftColumnIndex = 10
+	// 菜单顶部
+	gTerminalState.MenuTopRowIndex = 0
+	if gTerminalState.MaxLineLength-gTerminalState.SelectedLineIndex > gTerminalState.MenuHeight {
+		// 当前光标的下部分高度大于menu高度
+		gTerminalState.MenuTopRowIndex = gTerminalState.SelectedLineIndex + 1
+	} else if gTerminalState.SelectedLineIndex >= gTerminalState.MenuHeight {
+		// 当前光标的下部分高度小于menu高度，且光标上部分高度大于menu高度
+		gTerminalState.MenuTopRowIndex = gTerminalState.SelectedLineIndex - gTerminalState.MenuHeight
+	} else if gTerminalState.MaxLineLength > gTerminalState.MenuHeight {
+		// 居中
+		gTerminalState.MenuTopRowIndex = (gTerminalState.MaxLineLength-1-gTerminalState.MenuHeight)/2 + 1
+	} else {
+		// todo 拓展高度？
+	}
+	if gTerminalState.SelectedLineIndex < gTerminalState.MenuTopRowIndex {
+		// 下移光标
+		moveCursorToNextNthLines(gTerminalState.MenuTopRowIndex - gTerminalState.SelectedLineIndex)
+	} else {
+		// 上移光标
+		moveCursorToPreviousNthLines(gTerminalState.SelectedLineIndex - gTerminalState.MenuTopRowIndex)
+	}
+	gTerminalState.MenuLevelOCursorIndex = gTerminalState.SelectedLineIndex
+	gTerminalState.SelectedLineIndex = gTerminalState.MenuTopRowIndex
+	// 开始输出文字
+	for i := 0; i < gTerminalState.MenuHeight; i++ {
+		// 光标移动到合适的列位置
+		jumpToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+		// 输出文字
+		fmt.Print(gMenu[i])
+		// 光标移动到下一行
+		moveCursorToNextNthLines(1)
+	}
+	gTerminalState.SelectedLineIndex = gTerminalState.MenuTopRowIndex + gTerminalState.MenuHeight
+	moveCursorToLeft()
+	moveCursorToPreviousNthLines(gTerminalState.MenuHeight - 1)
+	gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - (gTerminalState.MenuHeight - 1)
+}
+
+func dismissMenuLevel1() {
+	gTerminalState.CurrentMenuLevel = gTerminalState.CurrentMenuLevel - 1
+	jumpCursorToCertainLine(gTerminalState.MenuTopRowIndex)
+	//selectedLineIndexBeforeDismiss := gTerminalState.SelectedLineIndex
+	// 遍历并清空屏幕
+	for i := 0; i < gTerminalState.MenuHeight; i++ {
+		clearCurrentLine()
+		fmt.Print("\r")
+		if i < gTerminalState.MenuHeight-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 光标停留在menu最后一行，然后移动到menu最上面一行
+	moveCursorToPreviousNthLines(gTerminalState.MenuHeight - 1)
+	for i := 0; i < gTerminalState.MenuHeight; i++ {
+		clearCurrentLine()
+		if gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.MenuTopRowIndex+i < len(gSearchData.FileDataArr) {
+			printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.MenuTopRowIndex+i)
+		}
+		fmt.Print("\r")
+		if i < gTerminalState.MenuHeight-1 {
+			moveCursorToNextNthLines(1)
+		}
+	}
+	// 光标停留在menu最后一行，然后移动到原来的位置
+	gTerminalState.SelectedLineIndex = gTerminalState.MenuTopRowIndex + gTerminalState.MenuHeight - 1
+	jumpCursorToCertainLine(gTerminalState.MenuLevelOCursorIndex)
+	gTerminalState.SelectedLineIndex = gTerminalState.MenuLevelOCursorIndex
 }
 
 func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {

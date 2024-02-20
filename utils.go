@@ -47,6 +47,16 @@ var gInstructions = []string{
 	"| 6. Add -t to display files in update time order.             |",
 	"|--------------------------------------------------------------|"}
 
+var gMenu = []string{
+	" +-----------------------+ ",
+	" |>> Info            [I] | ",
+	" |   Rename          [R] | ",
+	" |   Delete          [D] | ",
+	" |   Parent Folder   [P] | ",
+	" |   Close           [C] | ",
+	" +-----------------------+ ",
+}
+
 func printHelpInstructions() {
 	for _, value := range gInstructions {
 		fmt.Println(value)
@@ -212,6 +222,14 @@ func moveCursorToPreviousNthLines(nth int) {
 	}
 }
 
+func jumpCursorToCertainLine(destLineIndex int) {
+	if destLineIndex < gTerminalState.SelectedLineIndex {
+		moveCursorToPreviousNthLines(gTerminalState.SelectedLineIndex - destLineIndex)
+	} else {
+		moveCursorToNextNthLines(destLineIndex - gTerminalState.SelectedLineIndex)
+	}
+}
+
 func moveCursorToNextNthLines(nth int) {
 	fmt.Print("\033[") // ANSI escape code to move the cursor down one line
 	fmt.Print(nth)
@@ -227,6 +245,14 @@ func clearPreviousNthLines(nth int) {
 
 func clearCurrentLine() {
 	fmt.Print("\033[2K") // ANSI escape code to clear the line
+	fmt.Print("\r")
+}
+func jumpToColumnIndex(columnIndex int) {
+	fmt.Print("\r")
+	fmt.Printf("\033[%dC", columnIndex)
+}
+
+func moveCursorToLeft() {
 	fmt.Print("\r")
 }
 
@@ -399,7 +425,7 @@ func getUnselectedDisplayFileNameByIndex(arr []FileData, selectedGroupIndex int,
 	return arr[selectedGroupIndex*gTerminalState.SwitchScreenLines+selectedLineIndex].DisplayFileName
 }
 
-func selectCurrentFile() int {
+func openCurrentFile() int {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -415,7 +441,7 @@ func selectCurrentFile() int {
 	return 0
 }
 
-func selectCurrentFilesParentDir() int {
+func openCurrentFilesParentDir() int {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error:", err)

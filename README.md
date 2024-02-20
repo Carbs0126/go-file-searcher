@@ -30,12 +30,10 @@
       [F] >  android/someproject   
       [F]    +-----------------------+   +----------------------------------------+ 
       [F]    | > Info            [I] |   |              File Info                 |
-      [F]    |   CD into         [C] |   |    Size:  300000 Byte (3MB)            |
+      [F]    |   Rename          [R] |   |    Size:  300000 Byte (3MB)            |
       [F]    |   Delete          [D] |   |    Type:  jpeg  |  1920x1080           |
       [F]    |   Parent Folder   [P] |   |  Create:  1970.01.01 20:00:01          |
-      [F]    |   Open File   [Enter] |   +----------------------------------------+
-      [F]    |   Close         [Esc] |
-      [F]    |   Rename          [R] |
+      [F]    |   Close           [C] |   +----------------------------------------+
       [F]    +-----------------------+
       [F]    abcdefg.txt
    ```
