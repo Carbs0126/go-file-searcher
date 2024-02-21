@@ -29,8 +29,8 @@ func main() {
 		fmt.Println("Search results are Empty.")
 		return
 	}
-	clearPreviousNthLines(getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup))
-	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+	clearPreviousNthLine(getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup))
+	printContentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 
 	err := keyboard.Open()
 	if err != nil {
@@ -50,38 +50,88 @@ func main() {
 			panic(event.Err)
 		}
 		if event.Key == keyboard.KeyArrowUp {
-			if gTerminalState.SelectedLineIndex < 0 {
-				continue
-			} else if gTerminalState.SelectedLineIndex == 0 {
-				if 0 < gTerminalState.SelectedGroupIndex {
-					showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.MaxLineLength-1)
-				}
-			} else {
-				clearCurrentLine()
-				printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
-				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - 1
-				if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup) {
-					clearPreviousNthLines(1)
-					printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
-				}
-			}
-		} else if event.Key == keyboard.KeyArrowDown {
-			if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)-1 {
-				// 当前页面
-				clearCurrentLine()
-				printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
-				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex + 1
-				clearNextLine()
-				fmt.Print("\r")
-				printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
-			} else {
-				if gTerminalState.SelectedGroupIndex < getGroupLength(gSearchData.DisplayFileNamesInGroup)-1 {
-					// 如果有下一页，则进入下一页
-					showNextPage(gTerminalState.SelectedLineIndex, 0)
+			if gTerminalState.CurrentMenuLevel == 0 {
+				if gTerminalState.SelectedLineIndex < 0 {
+					continue
+				} else if gTerminalState.SelectedLineIndex == 0 {
+					if 0 < gTerminalState.SelectedGroupIndex {
+						showPreviousPage(gTerminalState.SelectedLineIndex, gTerminalState.MaxLineLength-1)
+					}
 				} else {
-					// 没有下一页，到底了
+					clearCurrentLine()
+					printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+					gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - 1
+					if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup) {
+						clearPreviousNthLine(1)
+						printContentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+					}
+				}
+			} else if gTerminalState.CurrentMenuLevel == 1 {
+				// 在菜单中上下切换
+				if gTerminalState.SelectedLineIndex <= gTerminalState.MenuTopRowIndex+1 {
 					continue
 				}
+				clearCurrentLine()
+				printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				// 光标移动到合适的列位置
+				moveCursorToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+				// 输出文字
+				//fmt.Print(gMenu[gTerminalState.SelectedLineIndex-gTerminalState.MenuTopRowIndex])
+				printUnselectedMenuLevel1Line(gTerminalState.SelectedLineIndex - gTerminalState.MenuTopRowIndex)
+				// 光标移动到上一行
+				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - 1
+				clearPreviousNthLine(1)
+				moveCursorToLeft()
+				if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup) {
+					printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				}
+				moveCursorToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+				printSelectedMenuLevel1Line(gTerminalState.SelectedLineIndex - gTerminalState.MenuTopRowIndex)
+				//fmt.Print(gMenu[gTerminalState.SelectedLineIndex-gTerminalState.MenuTopRowIndex])
+				moveCursorToColumnIndex(gTerminalState.MenuCursorColumnIndex)
+			}
+		} else if event.Key == keyboard.KeyArrowDown {
+			if gTerminalState.CurrentMenuLevel == 0 {
+				if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)-1 {
+					// 当前页面
+					clearCurrentLine()
+					printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+					gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex + 1
+					clearNextLine()
+					fmt.Print("\r")
+					printContentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				} else {
+					if gTerminalState.SelectedGroupIndex < getGroupLength(gSearchData.DisplayFileNamesInGroup)-1 {
+						// 如果有下一页，则进入下一页
+						showNextPage(gTerminalState.SelectedLineIndex, 0)
+					} else {
+						// 没有下一页，到底了
+						continue
+					}
+				}
+			} else if gTerminalState.CurrentMenuLevel == 1 {
+				// 在菜单中上下切换
+				if gTerminalState.MenuBottomRowIndex-1 <= gTerminalState.SelectedLineIndex {
+					continue
+				}
+				clearCurrentLine()
+				printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				// 光标移动到合适的列位置
+				moveCursorToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+				// 输出文字
+				printUnselectedMenuLevel1Line(gTerminalState.SelectedLineIndex - gTerminalState.MenuTopRowIndex)
+				//fmt.Print(gMenu[gTerminalState.SelectedLineIndex-gTerminalState.MenuTopRowIndex])
+				// 光标移动到下一行
+				gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex + 1
+				clearNextNthLine(1)
+				moveCursorToLeft()
+				if gTerminalState.SelectedLineIndex < getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup) {
+					printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+				}
+				moveCursorToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+				//fmt.Print(gMenu[gTerminalState.SelectedLineIndex-gTerminalState.MenuTopRowIndex])
+				printSelectedMenuLevel1Line(gTerminalState.SelectedLineIndex - gTerminalState.MenuTopRowIndex)
+				moveCursorToColumnIndex(gTerminalState.MenuCursorColumnIndex)
 			}
 		} else if event.Key == keyboard.KeyArrowRight {
 			// 切屏
@@ -139,12 +189,8 @@ func main() {
 
 func restoreCurrentLineWithSearchResult() {
 	clearCurrentLine()
-	printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+	printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 	fmt.Print("\r")
-}
-
-func isLinux() bool {
-	return runtime.GOOS == "linux"
 }
 
 func isMac() bool {
@@ -162,8 +208,8 @@ func popMenu() {
 func popMenuLevel1() {
 	// 菜单高度
 	gTerminalState.MenuHeight = len(gMenu)
-	// 菜单距离左侧 16 个字符
 	gTerminalState.MenuLeftColumnIndex = 10
+	gTerminalState.MenuCursorColumnIndex = 12
 	// 菜单顶部
 	gTerminalState.MenuTopRowIndex = 0
 	if gTerminalState.MaxLineLength-gTerminalState.SelectedLineIndex > gTerminalState.MenuHeight {
@@ -178,6 +224,7 @@ func popMenuLevel1() {
 	} else {
 		// todo 拓展高度？
 	}
+	gTerminalState.MenuBottomRowIndex = gTerminalState.MenuTopRowIndex + gTerminalState.MenuHeight - 1
 	if gTerminalState.SelectedLineIndex < gTerminalState.MenuTopRowIndex {
 		// 下移光标
 		moveCursorToNextNthLines(gTerminalState.MenuTopRowIndex - gTerminalState.SelectedLineIndex)
@@ -190,16 +237,22 @@ func popMenuLevel1() {
 	// 开始输出文字
 	for i := 0; i < gTerminalState.MenuHeight; i++ {
 		// 光标移动到合适的列位置
-		jumpToColumnIndex(gTerminalState.MenuLeftColumnIndex)
+		moveCursorToColumnIndex(gTerminalState.MenuLeftColumnIndex)
 		// 输出文字
-		fmt.Print(gMenu[i])
+		if i == 1 {
+			printSelectedMenuLevel1Line(i)
+			//fmt.Print(gMenu[i])
+		} else {
+			printUnselectedMenuLevel1Line(i)
+			//fmt.Print(gMenu[i])
+		}
 		// 光标移动到下一行
 		moveCursorToNextNthLines(1)
 	}
 	gTerminalState.SelectedLineIndex = gTerminalState.MenuTopRowIndex + gTerminalState.MenuHeight
-	moveCursorToLeft()
 	moveCursorToPreviousNthLines(gTerminalState.MenuHeight - 1)
 	gTerminalState.SelectedLineIndex = gTerminalState.SelectedLineIndex - (gTerminalState.MenuHeight - 1)
+	moveCursorToColumnIndex(gTerminalState.MenuCursorColumnIndex)
 }
 
 func dismissMenuLevel1() {
@@ -219,7 +272,7 @@ func dismissMenuLevel1() {
 	for i := 0; i < gTerminalState.MenuHeight; i++ {
 		clearCurrentLine()
 		if gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.MenuTopRowIndex+i < len(gSearchData.FileDataArr) {
-			printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.MenuTopRowIndex+i)
+			printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.MenuTopRowIndex+i)
 		}
 		fmt.Print("\r")
 		if i < gTerminalState.MenuHeight-1 {
@@ -250,7 +303,7 @@ func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
 	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)
 	for i := 0; i < currentGroupLinesLength; i++ {
 		clearCurrentLine()
-		printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
+		printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
 		fmt.Print("\r")
 		if i < currentGroupLinesLength-1 {
 			moveCursorToNextNthLines(1)
@@ -264,7 +317,7 @@ func showNextPage(oldSelectedLineIndex int, newSelectedLineIndex int) {
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
 	gTerminalState.SelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+	printContentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 }
 
 func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
@@ -285,7 +338,7 @@ func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
 	currentGroupLinesLength := getSelectedGroupDisplayFileNamesLength(gSearchData.DisplayFileNamesInGroup)
 	for i := 0; i < currentGroupLinesLength; i++ {
 		clearCurrentLine()
-		printCurrentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
+		printContentLineWithUnselectedDisplayName(gTerminalState.SelectedGroupIndex, i)
 		fmt.Print("\r")
 		if i < currentGroupLinesLength-1 {
 			moveCursorToNextNthLines(1)
@@ -299,5 +352,5 @@ func showPreviousPage(oldPageSelectedLineIndex int, newSelectedLineIndex int) {
 	moveCursorToPreviousNthLines(currentGroupLinesLength - 1 - newSelectedLineIndex)
 	gTerminalState.SelectedLineIndex = newSelectedLineIndex
 	clearCurrentLine()
-	printCurrentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
+	printContentLineWithSelectedDisplayName(gTerminalState.SelectedGroupIndex, gTerminalState.SelectedLineIndex)
 }

@@ -21,10 +21,14 @@ type TerminalState struct {
 	CurrentMenuLevel int
 	// Menu 显示时的高度
 	MenuHeight int
-	// Menu 显示时，左侧光标位置
+	// Menu 显示时，Menu左侧位置
 	MenuLeftColumnIndex int
+	// Menu 显示时，光标位置
+	MenuCursorColumnIndex int
 	// Menu 显示时，顶部光标位置
 	MenuTopRowIndex int
+	// Menu 显示时，底部光标位置
+	MenuBottomRowIndex int
 	// 没有弹出menu时的cursor的位置
 	MenuLevelOCursorIndex int
 	// 弹出一级menu时的cursor的位置
@@ -71,6 +75,7 @@ func initStateData() {
 		MenuHeight:            0,
 		MenuLeftColumnIndex:   0,
 		MenuTopRowIndex:       0,
+		MenuBottomRowIndex:    0,
 		MenuLevelOCursorIndex: 0,
 		MenuLevel1CursorIndex: 0,
 	}

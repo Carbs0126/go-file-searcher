@@ -42,19 +42,19 @@ var gInstructions = []string{
 	"| 2. Press ↑ or ↓ to select a file.                            |",
 	"| 3. Press ← or → to switch screen.                            |",
 	"| 4. Press Enter to open the selected file.                    |",
-	"| 4. Press Space to open the selected file's Directory.        |",
-	"| 5. Add -r to recursively walks through current directories.  |",
-	"| 6. Add -t to display files in update time order.             |",
+	"| 5. Press Space to open the selected file's Directory.        |",
+	"| 6. Add -r to recursively walks through current directories.  |",
+	"| 7. Add -t to display files in update time order.             |",
 	"|--------------------------------------------------------------|"}
 
 var gMenu = []string{
-	" +-----------------------+ ",
-	" |>> Info            [I] | ",
-	" |   Rename          [R] | ",
-	" |   Delete          [D] | ",
-	" |   Parent Folder   [P] | ",
-	" |   Close           [C] | ",
-	" +-----------------------+ ",
+	" +------------------------+ ",
+	" |    Info            [I] | ",
+	" |    Rename          [R] | ",
+	" |    Delete          [D] | ",
+	" |    Parent Folder   [P] | ",
+	" |    Close           [C] | ",
+	" +------------------------+ ",
 }
 
 func printHelpInstructions() {
@@ -236,7 +236,7 @@ func moveCursorToNextNthLines(nth int) {
 	fmt.Print("B")
 }
 
-func clearPreviousNthLines(nth int) {
+func clearPreviousNthLine(nth int) {
 	fmt.Print("\033[")
 	fmt.Print(nth)
 	fmt.Print("F")       // ANSI escape code to move the cursor up
@@ -247,7 +247,7 @@ func clearCurrentLine() {
 	fmt.Print("\033[2K") // ANSI escape code to clear the line
 	fmt.Print("\r")
 }
-func jumpToColumnIndex(columnIndex int) {
+func moveCursorToColumnIndex(columnIndex int) {
 	fmt.Print("\r")
 	fmt.Printf("\033[%dC", columnIndex)
 }
@@ -268,11 +268,20 @@ func clearNextNthLine(nth int) {
 	fmt.Print("\033[2K") // ANSI escape code to clear the line
 }
 
-func printCurrentLineWithUnselectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
+func printContentLineWithUnselectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
 	fmt.Print(getUnselectedDisplayFileNameByIndex(gSearchData.FileDataArr, selectedGroupIndex, selectedLineIndex))
 }
 
-func printCurrentLineWithSelectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
+func printSelectedMenuLevel1Line(selectedMenuIndex int) {
+	selectedMenuLine := addStringIntoAString(gMenu[selectedMenuIndex], 3, ">>")
+	fmt.Print(selectedMenuLine)
+}
+
+func printUnselectedMenuLevel1Line(selectedMenuIndex int) {
+	fmt.Print(gMenu[selectedMenuIndex])
+}
+
+func printContentLineWithSelectedDisplayName(selectedGroupIndex int, selectedLineIndex int) {
 	fmt.Print(getSelectedDisplayFileNameByIndex(gSearchData.FileDataArr, selectedGroupIndex, selectedLineIndex))
 	fmt.Print("\r")
 }
@@ -414,7 +423,7 @@ func getDisplayFileName(fileName string) string {
 }
 
 func addStringIntoAString(originalStr string, insertedIndex int, insertedString string) string {
-	return originalStr[0:insertedIndex] + insertedString + originalStr[insertedIndex+1:]
+	return originalStr[0:insertedIndex] + insertedString + originalStr[insertedIndex+len(insertedString):]
 }
 
 func getSelectedDisplayFileNameByIndex(arr []FileData, selectedGroupIndex int, selectedLineIndex int) string {
