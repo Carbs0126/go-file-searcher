@@ -351,6 +351,9 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 	} else {
 		// 搜索遍历所有层级
 		err = filepath.Walk(currentDir, func(path string, fileInfo os.FileInfo, err error) error {
+			if path == currentDir {
+				return nil
+			}
 			if err != nil {
 				fmt.Println(err)
 				return nil
@@ -477,11 +480,12 @@ func openCurrentFile() int {
 		fmt.Println("Error:", err)
 		return 1
 	}
-	cmd := exec.Command("open", filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath))
+	fileName := filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath)
+	cmd := exec.Command("open", fileName)
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error occurred when executing command:", err)
+		fmt.Println("Error occurred when executing command: open", fileName)
 		return 2
 	}
 	return 0
@@ -493,12 +497,12 @@ func openCurrentFilesParentDir() int {
 		fmt.Println("Error:", err)
 		return 1
 	}
-	cmd := exec.Command("open",
-		filepath.Dir(filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath)))
+	fileName := filepath.Dir(filepath.Join(currentDir, gSearchData.FileDataArr[gTerminalState.SelectedGroupIndex*gTerminalState.SwitchScreenLines+gTerminalState.SelectedLineIndex].FilePath))
+	cmd := exec.Command("open", fileName)
 	// 获取命令的输出
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error occurred when executing command:", err)
+		fmt.Println("Error occurred when executing command: open", fileName)
 		return 2
 	}
 	return 0
