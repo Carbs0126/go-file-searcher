@@ -12,28 +12,33 @@ import (
 	"unicode/utf8"
 )
 
-var gCommandHelp = map[string]int8{
-	"-help": 0,
-	"-h":    0,
+var gCommandHelp = map[string]interface{}{
+	"-help": struct{}{},
+	"-h":    struct{}{},
 }
 
-var gCommandPlain = map[string]int8{
-	"-plain": 0,
-	"-p":     0,
+var gCommandPlain = map[string]interface{}{
+	"-plain": struct{}{},
+	"-p":     struct{}{},
 }
 
-var gCommandTime = map[string]int8{
-	"-time": 0,
-	"-t":    0,
+var gCommandTime = map[string]interface{}{
+	"-time": struct{}{},
+	"-t":    struct{}{},
 }
 
-var gCommands = map[string]int8{
-	"-help":  0,
-	"-h":     0,
-	"-plain": 0,
-	"-p":     0,
-	"-time":  0,
-	"-t":     0,
+var gCommandCount = map[string]interface{}{
+	"-count": struct{}{},
+	"-c":     struct{}{},
+}
+
+var gCommands = map[string]interface{}{
+	"-help":  struct{}{},
+	"-h":     struct{}{},
+	"-plain": struct{}{},
+	"-p":     struct{}{},
+	"-time":  struct{}{},
+	"-t":     struct{}{},
 }
 
 var gInstructions = []string{
@@ -45,6 +50,7 @@ var gInstructions = []string{
 	"| 5. Press Space to open the selected file's Directory.        |",
 	"| 6. Add -p to search the plain first layer Directory.         |",
 	"| 7. Add -t to display files in update time order.             |",
+	"| 8. Add -cx to search the first x files and stop.             |",
 	"|--------------------------------------------------------------|"}
 
 var gMenu = []string{
@@ -85,6 +91,19 @@ func isArgTime(s string) bool {
 		return true
 	}
 	return false
+}
+
+func getSearchCount(s string) int {
+	count := 0
+	for key, _ := range gCommandCount {
+		if strings.HasPrefix(s, key) {
+			count, _ = strconv.Atoi(s[len(key):])
+			if count > 0 {
+				return count
+			}
+		}
+	}
+	return count
 }
 
 func getTerminalColumns() (int, error) {
@@ -149,7 +168,13 @@ func getCommandState() {
 				gCommandState.Time = true
 			}
 		} else {
-			argsForSearchPattern = append(argsForSearchPattern, arg)
+			searchCount := getSearchCount(arg)
+			if searchCount > 0 {
+				gCommandState.Count.CountSwitch = true
+				gCommandState.Count.CountNumber = searchCount
+			} else {
+				argsForSearchPattern = append(argsForSearchPattern, arg)
+			}
 		}
 	}
 	var patternBuilder strings.Builder
@@ -317,6 +342,11 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 				return
 			}
 			prepareMatchedFileInfo(reg, fileName, &fileInfo)
+			if gCommandState.Count.CountSwitch {
+				if len(gSearchData.FileDataArr) >= gCommandState.Count.CountNumber {
+					break
+				}
+			}
 		}
 	} else {
 		// 搜索遍历所有层级
@@ -330,6 +360,11 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 				filePath = path[len(currentDir)+1:]
 			}
 			prepareMatchedFileInfo(reg, filePath, &fileInfo)
+			if gCommandState.Count.CountSwitch {
+				if len(gSearchData.FileDataArr) >= gCommandState.Count.CountNumber {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		})
 	}

@@ -42,8 +42,15 @@ type CommandState struct {
 	Plain bool
 	// 是否包含 time
 	Time bool
+	// 是否包含 count
+	Count CountState
 	// 是否包含 search word
 	SearchPattern string
+}
+
+type CountState struct {
+	CountSwitch bool
+	CountNumber int
 }
 
 type SearchData struct {
@@ -83,6 +90,7 @@ func initStateData() {
 		Help:          false,
 		Plain:         false,
 		Time:          false,
+		Count:         CountState{CountSwitch: false, CountNumber: 0},
 		SearchPattern: "",
 	}
 	gSearchData = SearchData{
