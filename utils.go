@@ -17,9 +17,9 @@ var gCommandHelp = map[string]int8{
 	"-h":    0,
 }
 
-var gCommandRecursive = map[string]int8{
-	"-recursive": 0,
-	"-r":         0,
+var gCommandPlain = map[string]int8{
+	"-plain": 0,
+	"-p":     0,
 }
 
 var gCommandTime = map[string]int8{
@@ -28,12 +28,12 @@ var gCommandTime = map[string]int8{
 }
 
 var gCommands = map[string]int8{
-	"-help":      0,
-	"-h":         0,
-	"-recursive": 0,
-	"-r":         0,
-	"-time":      0,
-	"-t":         0,
+	"-help":  0,
+	"-h":     0,
+	"-plain": 0,
+	"-p":     0,
+	"-time":  0,
+	"-t":     0,
 }
 
 var gInstructions = []string{
@@ -43,7 +43,7 @@ var gInstructions = []string{
 	"| 3. Press ← or → to switch screen.                            |",
 	"| 4. Press Enter to open the selected file.                    |",
 	"| 5. Press Space to open the selected file's Directory.        |",
-	"| 6. Add -r to recursively walks through current directories.  |",
+	"| 6. Add -p to search the plain first layer Directory.         |",
 	"| 7. Add -t to display files in update time order.             |",
 	"|--------------------------------------------------------------|"}
 
@@ -71,8 +71,8 @@ func isArgHelp(s string) bool {
 	return false
 }
 
-func isArgRecursive(s string) bool {
-	_, exists := gCommandRecursive[s]
+func isArgPlain(s string) bool {
+	_, exists := gCommandPlain[s]
 	if exists {
 		return true
 	}
@@ -141,8 +141,8 @@ func getCommandState() {
 		_, exists := gCommands[arg]
 		if exists {
 			switch {
-			case isArgRecursive(arg):
-				gCommandState.Recursive = true
+			case isArgPlain(arg):
+				gCommandState.Plain = true
 			case isArgHelp(arg):
 				gCommandState.Help = true
 			case isArgTime(arg):
@@ -289,7 +289,7 @@ func printContentLineWithSelectedDisplayName(selectedGroupIndex int, selectedLin
 func onlyPrintHelpInstructions() bool {
 	if len(gCommandState.SearchPattern) == 0 &&
 		gCommandState.Help &&
-		!gCommandState.Recursive &&
+		!gCommandState.Plain &&
 		!gCommandState.Time {
 		return true
 	}
@@ -302,20 +302,8 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 		fmt.Println("Error:", err)
 		return
 	}
-	if gCommandState.Recursive {
-		err = filepath.Walk(currentDir, func(path string, fileInfo os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-			filePath := path
-			if len(path) > len(currentDir)+1 {
-				filePath = path[len(currentDir)+1:]
-			}
-			prepareMatchedFileInfo(reg, filePath, &fileInfo)
-			return nil
-		})
-	} else {
+	if gCommandState.Plain {
+		// 只搜索第一层
 		files, err := os.ReadDir(currentDir)
 		if err != nil {
 			fmt.Println("Error:", err)
@@ -330,6 +318,20 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 			}
 			prepareMatchedFileInfo(reg, fileName, &fileInfo)
 		}
+	} else {
+		// 搜索遍历所有层级
+		err = filepath.Walk(currentDir, func(path string, fileInfo os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+			filePath := path
+			if len(path) > len(currentDir)+1 {
+				filePath = path[len(currentDir)+1:]
+			}
+			prepareMatchedFileInfo(reg, filePath, &fileInfo)
+			return nil
+		})
 	}
 	// 按照时间排序
 	if gCommandState.Time {

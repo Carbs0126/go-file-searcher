@@ -38,8 +38,8 @@ type TerminalState struct {
 type CommandState struct {
 	// 是否包含 help
 	Help bool
-	// 是否包含 recursive
-	Recursive bool
+	// 是否包含 plain，只搜索第一层
+	Plain bool
 	// 是否包含 time
 	Time bool
 	// 是否包含 search word
@@ -81,7 +81,7 @@ func initStateData() {
 	}
 	gCommandState = CommandState{
 		Help:          false,
-		Recursive:     false,
+		Plain:         false,
 		Time:          false,
 		SearchPattern: "",
 	}
