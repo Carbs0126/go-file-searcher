@@ -9,8 +9,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
+
+var separator = string(filepath.Separator)
 
 var gCommandHelp = map[string]interface{}{
 	"-help": struct{}{},
@@ -334,6 +337,7 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 			fmt.Println("Error:", err)
 			return
 		}
+		printCurrentSearchingDirectory(currentDir)
 		for _, file := range files {
 			fileName := file.Name()
 			fileInfo, err := file.Info()
@@ -348,14 +352,18 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 				}
 			}
 		}
+		clearCurrentLine()
 	} else {
 		// 搜索遍历所有层级
+		// path 有可能是文件夹，也有可能是文件
 		err = filepath.Walk(currentDir, func(path string, fileInfo os.FileInfo, err error) error {
 			if path == currentDir {
 				return nil
 			}
 			if err != nil {
-				fmt.Println(err)
+				fmt.Print("ERROR occurred:", err)
+				time.Sleep(time.Second)
+				clearCurrentLine()
 				return nil
 			}
 			filePath := path
@@ -363,6 +371,20 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 				filePath = path[len(currentDir)+1:]
 			}
 			prepareMatchedFileInfo(reg, filePath, &fileInfo)
+			splits := strings.Split(filePath, separator)
+			if fileInfo.IsDir() {
+				if len(splits[0]) > 0 {
+					printCurrentSearchingDirectory(currentDir + "/" + splits[0] + "/")
+				} else {
+					printCurrentSearchingDirectory(currentDir + "/")
+				}
+			} else {
+				if len(splits) > 1 {
+					printCurrentSearchingDirectory(currentDir + "/" + splits[1] + "/")
+				} else {
+					printCurrentSearchingDirectory(currentDir + "/")
+				}
+			}
 			if gCommandState.Count.CountSwitch {
 				if len(gSearchData.FileDataArr) >= gCommandState.Count.CountNumber {
 					return filepath.SkipDir
@@ -370,6 +392,7 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 			}
 			return nil
 		})
+		clearCurrentLine()
 	}
 	// 按照时间排序
 	if gCommandState.Time {
@@ -506,4 +529,9 @@ func openCurrentFilesParentDir() int {
 		return 2
 	}
 	return 0
+}
+
+func printCurrentSearchingDirectory(path string) {
+	clearCurrentLine()
+	fmt.Print(getDisplayFileName("Searching Folder: " + path))
 }
