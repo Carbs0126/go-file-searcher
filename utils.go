@@ -356,6 +356,7 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 	} else {
 		// 搜索遍历所有层级
 		// path 有可能是文件夹，也有可能是文件
+		// currentDir、path 均为全路径
 		err = filepath.Walk(currentDir, func(path string, fileInfo os.FileInfo, err error) error {
 			if path == currentDir {
 				return nil
@@ -367,7 +368,9 @@ func printCurrentDirFiles(reg *regexp.Regexp) {
 				return nil
 			}
 			filePath := path
-			if len(path) > len(currentDir)+1 {
+			if len(currentDir) == 1 {
+				filePath = path[1:]
+			} else if len(path) > len(currentDir)+1 {
 				filePath = path[len(currentDir)+1:]
 			}
 			prepareMatchedFileInfo(reg, filePath, &fileInfo)
